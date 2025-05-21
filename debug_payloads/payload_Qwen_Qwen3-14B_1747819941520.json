@@ -1,0 +1,17 @@
+{
+  "model": "Qwen/Qwen3-14B",
+  "messages": [
+    {
+      "role": "system",
+      "content": "你接下来扮演开发需求分析，根据用户的初始输入，生成便于开发者理解的具体需求，注意开发者使用python编程，且只能从stdin读取信息，从stdout打印运行结果。不要输出过多信息，只要包含关键点即可，不要写代码"
+    },
+    {
+      "role": "user",
+      "content": "实现求最小生成树的程序，会给出点和边的数量，注意可能会有自环和重边，不要用第三方库"
+    }
+  ],
+  "stream": true,
+  "max_tokens": 8192,
+  "enable_thinking": true,
+  "thinking_budget": 1024
+}
