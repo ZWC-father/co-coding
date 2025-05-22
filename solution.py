@@ -1,91 +1,42 @@
-# solution.py
-
-def find(parent, x):
-    """Find the root of x with path compression."""
-    if parent[x] != x:
-        parent[x] = find(parent, parent[x])  # Path compression
-    return parent[x]
-
-def union(parent, size, x, y):
-    """Union two sets and return True if successful."""
-    root_x = find(parent, x)
-    root_y = find(parent, y)
-    if root_x == root_y:
-        return False  # Already connected
-    # Union by size: smaller tree merges into larger tree
-    if size[root_x] < size[root_y]:
-        parent[root_x] = root_y
-        size[root_y] += size[root_x]
-    else:
-        parent[root_y] = root_x
-        size[root_x] += size[root_y]
-    return True
+import sys
+import re
 
 def main():
-    import sys
-    input = sys.stdin.read().split()
-    idx = 0
-    n = int(input[idx])
-    idx += 1
-    m = int(input[idx])
-    idx += 1
+    lines = [line.rstrip('\n') for line in sys.stdin]
+    if len(lines) < 2:
+        print("error", file=sys.stderr)
+        sys.exit(1)
+    s, p = lines[0], lines[1]
 
-    edges = []
-    # Process m edges
-    for _ in range(m):
-        u = int(input[idx])
-        idx += 1
-        v = int(input[idx])
-        idx += 1
-        w = int(input[idx])
-        idx += 1
-        if u != v:  # Discard self-loops
-            edges.append((w, u, v))
+    if not re.fullmatch(r'[a-z.*]*', p):
+        print("error", file=sys.stderr)
+        sys.exit(1)
+    if p.startswith('*'):
+        print("error", file=sys.stderr)
+        sys.exit(1)
+    if re.search(r'\*{2,}', p):
+        print("error", file=sys.stderr)
+        sys.exit(1)
 
-    # Sort edges by weight (ascending)
-    edges.sort()
+    m, n = len(s), len(p)
+    dp = [[False]*(n+1) for _ in range(m+1)]
+    dp[0][0] = True
 
-    # Initialize Union-Find structures
-    parent = dict()
-    size = dict()
-    def get_or_init(x):
-        if x not in parent:
-            parent[x] = x
-            size[x] = 1
-    # Initialize for all vertices in edges
-    for w, u, v in edges:
-        get_or_init(u)
-        get_or_init(v)
+    for j in range(1, n+1):
+        if p[j-1] == '*' and j >= 2:
+            dp[0][j] = dp[0][j-2]
 
-    total_weight = 0
-    edges_used = 0
+    for i in range(m+1):
+        for j in range(1, n+1):
+            if p[j-1] == '*':
+                dp[i][j] = dp[i][j-2]
+                if i > 0 and (p[j-2] == '.' or s[i-1] == p[j-2]):
+                    dp[i][j] |= dp[i-1][j]
+            else:
+                if i > 0 and (p[j-1] == '.' or s[i-1] == p[j-1]):
+                    dp[i][j] = dp[i-1][j-1]
 
-    for w, u, v in edges:
-        if find(parent, u) != find(parent, v):
-            union(parent, size, u, v)
-            total_weight += w
-            edges_used += 1
-            if edges_used == n - 1:
-                break  # MST complete
-
-    # Check if all vertices are connected
-    # Get all unique vertices
-    vertices = set()
-    for w, u, v in edges:
-        vertices.add(u)
-        vertices.add(v)
-    # If there are vertices not processed (no edges connected to them)
-    if len(vertices) < n:
-        # Incomplete graph
-        print(-1)
-        return
-
-    # Check if all vertices are connected to the same root
-    root_count = set(find(parent, v) for v in vertices if v in parent)
-    if len(root_count) > 1:
-        print(-1)
-    else:
-        print(total_weight)
+    print("true" if dp[m][n] else "false")
 
 if __name__ == "__main__":
     main()

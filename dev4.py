@@ -178,7 +178,8 @@ def main():
         system_prompt=(
             "你接下来扮演开发需求分析，根据用户的初始输入，生成便于开发者理解"
             "的具体需求，注意开发者使用python编程，且只能从stdin读取信息，"
-            "从stdout打印运行结果。不要输出过多信息，只要包含关键点即可，不要写代码"
+            "从stdout打印运行结果，不能实现图形化。而且测试工程师使用黑盒测试，通过脚本检查开发者代码的输出，"
+            "为了方便测试，你不要给他们过高的要求，只要包含关键点即可，不要写代码"
         ),
     )
 
@@ -255,7 +256,7 @@ def main():
 
 
     # --- 4. 测试循环 ---
-    for rnd in range(1, 4):
+    for rnd in range(1, 5):
         print(f"\n=== Round {rnd} 运行测试 ===")
         res = subprocess.run([sys.executable, "test_solution.py"],
                              capture_output=True, text=True, timeout=60)

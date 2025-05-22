@@ -1,0 +1,18 @@
+{
+  "model": "deepseek-reasoner",
+  "messages": [
+    {
+      "role": "system",
+      "content": "你是自动化测试工程师。第一次会话先根据需求分析及开发者代码（solution.py），生成一个 Python 测试脚本，要求：\n 1. 只输出一个Python代码块，我会帮你保存到为test_solution.py；\n 2. 调用开发者脚本：python3 solution.py即可，不要有额外操作，任何输入通过stdin，输出通过stdout或stderr；\n 3. 覆盖典型用例与边界场景，使用容错匹配以增强鲁棒性（例如去除多余空白）；\n 4. 对每个测试用例打印调试信息，若全部通过调用sys.exit(0)，否则sys.exit(1)；\n 5. 针对超时（60s）或异常情况捕获并报告。\n在下一次会话我会把测试脚本运行结果发给你，你有两种选择：\n 1. 如果测试脚本（test_solution.py）本身有错误，或者你想修改测试脚本，务必先输出\"<TEST_ERROR>\"标志，然后紧跟新的测试脚本；\n 2. 如果开发者代码（solution.py）有问题，你就给出错误分析，便于开发者修改，但一定不要帮他写代码。\n测试不要过于苛刻，不要写无关文字，不允许存在多个代码块。\n写测试脚本/生成报告的流程会重复多次直到成功。"
+    },
+    {
+      "role": "user",
+      "content": "需求描述：\n### 需求分析要点：\n\n#### 1. 功能描述\n- 实现一个字符串模式匹配功能，判断模式串 `p` 是否能完全匹配输入字符串 `s`。\n- 模式串 `p` 支持两种特殊字符：\n  - `.`：匹配任意单个字符。\n  - `*`：匹配前一个字符 0 次或多次（需注意 `*` 不能单独出现）。\n\n#### 2. 约束条件\n- 匹配必须是完全匹配，即整个字符串 `s` 必须被模式 `p` 完全覆盖。\n- 模式串 `p` 仅包含小写字母、`.` 和 `*`。\n- 输入字符串 `s` 仅包含小写字母。\n- 模式串 `p` 是有效的（即 `*` 不会出现在开头，也不会连续出现）。\n\n#### 3. 输入输出\n- **输入**：\n  - 从 `stdin` 读取两行：\n    - 第一行：字符串 `s`（例如 `\"aab\"`）。\n    - 第二行：模式串 `p`（例如 `\"c*a*b\"`）。\n  - 数据类型：字符串。\n  - 边界条件：\n    - `s` 和 `p` 可能为空字符串（`\"\"`）。\n    - `s` 和 `p` 的长度不超过 20（假设合理范围）。\n- **输出**：\n  - 打印 `true` 或 `false`，表示是否完全匹配。\n\n#### 4. 异常情况及处理\n- 无效输入：\n  - 模式串 `p` 包含非法字符（非小写字母、`.` 或 `*`）：建议提示并退出。\n  - `*` 出现在模式串开头：建议提示并退出。\n  - 输入行数不足：建议提示并退出。\n- 极端情况：\n  - `s` 或 `p` 为空字符串时需正确处理（例如 `p = \"a*\"` 可以匹配 `s = \"\"`）。\n  - `p` 中存在连续的 `*`（如 `a**b`）：假设输入合法，无需处理。\n\n#### 5. 示例说明\n- 示例 1：\n  - 输入：\n    ```\n    aab\n    c*a*b\n    ```\n  - 输出：`true`（`c*` 匹配 0 次，`a*` 匹配两次，`b` 匹配一次）。\n- 示例 2：\n  - 输入：\n    ```\n    aa\n    a\n    ```\n  - 输出：`false`（模式 `a` 无法完全匹配 `aa`）。\n\n\n开发者代码：\nimport sys\nimport re\n\ndef main():\n    lines = [line.rstrip('\\n') for line in sys.stdin]\n    if len(lines) < 2:\n        print(\"error\", file=sys.stderr)\n        sys.exit(1)\n    s, p = lines[0], lines[1]\n\n    if not re.fullmatch(r'[a-z.*]*', p):\n        print(\"error\", file=sys.stderr)\n        sys.exit(1)\n    if p.startswith('*'):\n        print(\"error\", file=sys.stderr)\n        sys.exit(1)\n    if re.search(r'\\*{2,}', p):\n        print(\"error\", file=sys.stderr)\n        sys.exit(1)\n\n    m, n = len(s), len(p)\n    dp = [[False]*(n+1) for _ in range(m+1)]\n    dp[0][0] = True\n\n    for j in range(1, n+1):\n        if p[j-1] == '*' and j >= 2:\n            dp[0][j] = dp[0][j-2]\n\n    for i in range(m+1):\n        for j in range(1, n+1):\n            if p[j-1] == '*':\n                dp[i][j] = dp[i][j-2]\n                if i > 0 and (p[j-2] == '.' or s[i-1] == p[j-2]):\n                    dp[i][j] |= dp[i-1][j]\n            else:\n                if i > 0 and (p[j-1] == '.' or s[i-1] == p[j-1]):\n                    dp[i][j] = dp[i-1][j-1]\n\n    print(\"true\" if dp[m][n] else \"false\")\n\nif __name__ == \"__main__\":\n    main()"
+    }
+  ],
+  "stream": true,
+  "max_tokens": 4096,
+  "stream_options": {
+    "include_usage": true
+  }
+}
