@@ -1,0 +1,19 @@
+{
+  "model": "deepseek-chat",
+  "messages": [
+    {
+      "role": "system",
+      "content": "你是自动化测试工程师。第一次会话先根据需求分析及开发者代码（solution.py），生成一个 Python 测试脚本，要求：\n1. 只输出一个Python代码块，我会帮你保存到为test_solution.py；\n2. 调用开发者脚本：python3 solution.py即可，不要有额外操作，任何输入通过stdin，输出通过stdout或stderr；\n3. 覆盖典型用例与边界场景，使用容错匹配以增强鲁棒性（例如去除多余空白）；\n4. 对每个测试用例打印调试信息，若全部通过调用sys.exit(0)，否则sys.exit(1)；\n5. 针对超时（60s）或异常情况捕获并报告。\n在下一次会话我会把测试脚本运行结果发给你，你有两种选择：\n1. 如果测试脚本（test_solution.py）本身有错误，或者你想修改测试脚本，务必先输出\"<TEST_ERROR>\"标志，然后紧跟新的测试脚本；\n2. 如果开发者代码（solution.py）有问题，你就给出错误分析，便于开发者修改，但一定不要帮他写代码。\n测试不要过于苛刻，不要写无关文字，不允许存在多个代码块。\n写测试脚本/生成报告的流程会重复多次直到成功。"
+    },
+    {
+      "role": "user",
+      "content": "需求描述：\n### 需求分析要点：\n\n1. **功能描述**  \n   - 从指定URL（http://quotes.toscrape.com/）爬取名言数据  \n   - 提取每条名言的三个字段：  \n     - 作者（`.author`）  \n     - 文本内容（`.text`）  \n     - 标签列表（`.tags`）  \n\n2. **输入/输出**  \n   - **输入**：无需用户输入，直接访问固定URL  \n   - **输出**：  \n     - 格式：JSON数组，每个元素为一条名言的对象  \n     - 字段名：`author`（字符串）、`text`（字符串）、`tags`（字符串数组）  \n     - 示例：  \n       ```json\n       [{\"author\": \"作者名\", \"text\": \"名言内容\", \"tags\": [\"标签1\", \"标签2\"]}, ...]\n       ```  \n     - 必须通过`stdout`输出  \n\n3. **技术约束**  \n   - 仅允许使用第三方库：`requests`（发送HTTP请求）、`beautifulsoup4`（解析HTML）  \n   - 禁止使用其他爬虫框架（如Scrapy）或解析库（如lxml）  \n\n4. **异常处理建议**  \n   - **网络请求失败**：捕获`requests.exceptions.RequestException`，输出错误信息到`stderr`  \n   - **HTML解析失败**：检查`.quote`容器是否存在，缺失字段时跳过或留空  \n   - **空结果**：若未找到任何名言，输出空数组`[]`  \n\n5. **其他要求**  \n   - 需处理分页逻辑（遍历所有页码直到无数据）  \n   - 标签需去除多余空白字符  \n   - 文本内容需清理首尾空白及特殊符号（如换行符）  \n\n6. **边界条件**  \n   - 作者名可能包含特殊字符（如Unicode）  \n   - 某些名言可能无标签  \n   - 网站结构可能变更（需验证`.quote`等选择器有效性）  \n\n（注：无需实现代码，仅提供需求框架）\n\n\n开发者代码：\nimport sys\nimport json\nimport requests\nfrom bs4 import BeautifulSoup\n\ndef scrape_quotes():\n    base_url = \"http://quotes.toscrape.com\"\n    quotes = []\n\n    try:\n        page = 1\n        while True:\n            url = f\"{base_url}/page/{page}/\"\n            response = requests.get(url)\n            response.raise_for_status()\n\n            soup = BeautifulSoup(response.text, 'html.parser')\n            quote_elements = soup.select('.quote')\n\n            if not quote_elements:\n                break\n\n            for quote in quote_elements:\n                text = quote.select_one('.text').get_text(strip=True).strip('“”')\n                author = quote.select_one('.author').get_text(strip=True)\n                tags = [tag.get_text(strip=True) for tag in quote.select('.tag')]\n\n                quotes.append({\n                    'author': author,\n                    'text': text,\n                    'tags': tags\n                })\n\n            page += 1\n\n    except requests.exceptions.RequestException as e:\n        print(f\"Error fetching data: {e}\", file=sys.stderr)\n        return []\n    except Exception as e:\n        print(f\"Error processing data: {e}\", file=sys.stderr)\n        return []\n\n    return quotes\n\nif __name__ == \"__main__\":\n    quotes = scrape_quotes()\n    print(json.dumps(quotes, ensure_ascii=False))"
+    }
+  ],
+  "stream": true,
+  "max_tokens": 4096,
+  "stream_options": {
+    "include_usage": true
+  },
+  "temperature": 0.3
+}

@@ -2,12 +2,8 @@ from __future__ import annotations
 import json, time
 from pathlib import Path
 from typing import List, Dict, Optional, Callable
-import httpx, openai                 # pip install openai>=1.12  :contentReference[oaicite:0]{index=0}
+import httpx, openai                 #openai >= 1.12
 from openai import OpenAIError
-"""
-OpenAISession —— 兼容 SiliconFlowSession 接口的官方 SDK 版本
--------------------------------------------------------------
-"""
 
 class GenerationInterrupted(Exception):
     """手动中断生成时抛出"""
@@ -17,10 +13,9 @@ class OpenAISession:
     def __init__(
         self,
         api_key: str,
+        base_url: str = "https://api.siliconflow.cn/v1/",
         model: str = "gpt-4o-mini",
         system_prompt: Optional[str] = None,
-        enable_thinking: bool = False,
-        thinking_budget: int = 16384,
         timeout: int = 60,
         max_tokens: int = 4096,
         extra_params: Optional[Dict] = None,
@@ -28,17 +23,14 @@ class OpenAISession:
         # 禁用系统代理
         httpx_client = httpx.Client(trust_env=False, timeout=timeout)
         self.client = openai.OpenAI(
-            api_key=api_key,
             http_client=httpx_client,
-            base_url="https://api.deepseek.com/",
+            base_url=base_url,
+            api_key=api_key,
             timeout=timeout
         )
         self.model = model
         self.max_tokens = max_tokens
-        self.enable_thinking = enable_thinking
-        self.thinking_budget = thinking_budget
         self.extra = extra_params or {}
-
         self.history: List[Dict[str, str]] = []
         if system_prompt:
             self.history.append({"role": "system", "content": system_prompt})
@@ -47,6 +39,12 @@ class OpenAISession:
         # 中断标志
         self._stop = False
 
+    def set_sys_prompt(self, prompt):
+        if not self.history:
+            self.history.append({"role": "system", "content": prompt})
+        else:
+            raise ValueError("设置系统提示词失败：历史不为空")
+    
     def stop(self):
         """
         手动中断当前 send 生成过程。
@@ -60,7 +58,6 @@ class OpenAISession:
         on_resp: Optional[Callable[[str], None]] = None,
         on_think: Optional[Callable[[str], None]] = None,
         on_chunk: Optional[Callable[[str], None]] = None,
-        stream: bool = True,
     ) -> Dict[str, int]:
         """流式模式：回答→on_resp，思考链→on_think；两者均推给 on_chunk"""
         # 重置中断标志
@@ -74,17 +71,14 @@ class OpenAISession:
         request_kwargs = {
             "model": self.model,
             "messages": history_copy,
-            "stream": stream,
+            "stream": True,
             "max_tokens": self.max_tokens,
             "stream_options": {"include_usage": True},
             **self.extra,
         }
-        if self.enable_thinking:
-            request_kwargs["enable_thinking"] = True
-            request_kwargs["thinking_budget"] = self.thinking_budget
 
         # 写调试 payload
-        payload_file = f"debug_payloads/payload_{self.model}_{int(time.time()*1000)}.json"
+        payload_file = f"debug_payloads/payload_{int(time.time()*1000)}.json"
         try:
             Path(payload_file).write_text(
                 json.dumps(request_kwargs, ensure_ascii=False, indent=2),
@@ -105,7 +99,8 @@ class OpenAISession:
                     raise GenerationInterrupted("已手动中断生成")
 
                 if not chunk.choices:
-                    raise ValueError("API 返回缺失 `choices` 字段")
+                    continue
+
                 delta = chunk.choices[0].delta
 
                 # 处理思考链
@@ -122,7 +117,6 @@ class OpenAISession:
                     answer_parts.append(cc)
 
                 fr = getattr(chunk.choices[0], "finish_reason", None)
-                # 当 finish_reason 明确非 "stop" 且不为空，视为异常终止
                 if fr and fr != "stop":
                     raise RuntimeError(f"生成被意外中断，finish_reason={fr}")
 
@@ -149,7 +143,7 @@ class OpenAISession:
         # 拼接并保存历史
         final_answer = "".join(answer_parts)
         self.history.append({"role": "assistant", "content": final_answer})
-        print(f"\nToken Usage: {usage}")
+        #print(f"\nToken Usage: {usage}")
         return usage
 
     def _self_destruct(self):

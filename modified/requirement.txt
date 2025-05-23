@@ -1,0 +1,4 @@
+帮我写脚本爬取这个网址的名言： http://quotes.toscrape.com/
+目标字段：作者、名言文本、标签。
+技术点：requests 获取 HTML，BeautifulSoup 定位 .quote 容器，提取 .text、.author、.tags 列表。
+注意输出格式为json，只能用requests和beautifulsoup4这两个第三方库。

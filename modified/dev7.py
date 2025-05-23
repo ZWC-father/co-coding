@@ -13,20 +13,16 @@ OpenAISession —— 兼容 SiliconFlowSession 接口的官方 SDK 版本
 • 额外参数（temperature、top_p、enable_thinking、thinking_budget…）原样透传
 • 使用 openai>=1.12 官方 SDK（sync 调用；async 同理）
 """
-
-
 class GenerationInterrupted(Exception):
-    """手动中断生成时抛出"""
     pass
 
 class OpenAISession:
     def __init__(
         self,
         api_key: str,
+        base_url: str = "https://api.siliconflow.cn/v1/",
         model: str = "gpt-4o-mini",
         system_prompt: Optional[str] = None,
-        enable_thinking: bool = False,
-        thinking_budget: int = 16384,
         timeout: int = 60,
         max_tokens: int = 4096,
         extra_params: Optional[Dict] = None,
@@ -34,17 +30,14 @@ class OpenAISession:
         # 禁用系统代理
         httpx_client = httpx.Client(trust_env=False, timeout=timeout)
         self.client = openai.OpenAI(
-            api_key=api_key,
             http_client=httpx_client,
-            base_url="https://api.deepseek.com/",
+            base_url=base_url,
+            api_key=api_key,
             timeout=timeout
         )
         self.model = model
         self.max_tokens = max_tokens
-        self.enable_thinking = enable_thinking
-        self.thinking_budget = thinking_budget
         self.extra = extra_params or {}
-
         self.history: List[Dict[str, str]] = []
         if system_prompt:
             self.history.append({"role": "system", "content": system_prompt})
@@ -66,7 +59,6 @@ class OpenAISession:
         on_resp: Optional[Callable[[str], None]] = None,
         on_think: Optional[Callable[[str], None]] = None,
         on_chunk: Optional[Callable[[str], None]] = None,
-        stream: bool = True,
     ) -> Dict[str, int]:
         """流式模式：回答→on_resp，思考链→on_think；两者均推给 on_chunk"""
         # 重置中断标志
@@ -80,17 +72,14 @@ class OpenAISession:
         request_kwargs = {
             "model": self.model,
             "messages": history_copy,
-            "stream": stream,
+            "stream": True,
             "max_tokens": self.max_tokens,
             "stream_options": {"include_usage": True},
             **self.extra,
         }
-        if self.enable_thinking:
-            request_kwargs["enable_thinking"] = True
-            request_kwargs["thinking_budget"] = self.thinking_budget
 
         # 写调试 payload
-        payload_file = f"debug_payloads/payload_{self.model}_{int(time.time()*1000)}.json"
+        payload_file = f"debug_payloads/payload_{int(time.time()*1000)}.json"
         try:
             Path(payload_file).write_text(
                 json.dumps(request_kwargs, ensure_ascii=False, indent=2),
@@ -111,7 +100,9 @@ class OpenAISession:
                     raise GenerationInterrupted("已手动中断生成")
 
                 if not chunk.choices:
-                    raise ValueError("API 返回缺失 `choices` 字段")
+                    print("[WARN] API 返回缺失 choices 字段")
+                    continue
+
                 delta = chunk.choices[0].delta
 
                 # 处理思考链
@@ -128,7 +119,6 @@ class OpenAISession:
                     answer_parts.append(cc)
 
                 fr = getattr(chunk.choices[0], "finish_reason", None)
-                # 当 finish_reason 明确非 "stop" 且不为空，视为异常终止
                 if fr and fr != "stop":
                     raise RuntimeError(f"生成被意外中断，finish_reason={fr}")
 
@@ -404,9 +394,9 @@ def main():
     del_path = Path("debug_payloads")
     shutil.rmtree(del_path, ignore_errors=True)
 
-    model_analyst = "deepseek-chat"
-    model_developer = "deepseek-reasoner"
-    model_tester = "deepseek-reasoner"
+    model_analyst = "Qwen/Qwen3-14B"
+    model_developer = "Qwen/Qwen3-235B-A22B"
+    model_tester = "Qwen/Qwen3-235B-A22B"
 
 #    analyst = SiliconFlowSession(
 #        api_key=token,
@@ -422,8 +412,6 @@ def main():
     analyst = OpenAISession(
         api_key=token,
         model=model_analyst,
-        max_tokens=2048,
-        enable_thinking=False,
         system_prompt=(
             "你是需求分析专家。"
             " 用户会给出一个业务或算法需求，你需要：\n"
