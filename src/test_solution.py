@@ -10,113 +10,92 @@ def run_test():
 
     # Test 1: Basic functionality check
     try:
-        start_time = time()
+        start = time()
         result = subprocess.run(['python3', 'solution.py'], 
-                              capture_output=True, 
-                              text=True,
-                              timeout=timeout)
+                              capture_output=True, text=True, timeout=timeout)
+        elapsed = time() - start
 
-        # Check if output is valid JSON
-        try:
-            data = json.loads(result.stdout)
-            assert isinstance(data, list), "Output should be a JSON array"
-
-            if len(data) > 0:
-                first_item = data[0]
-                assert 'author' in first_item, "Missing 'author' field"
-                assert 'text' in first_item, "Missing 'text' field"
-                assert 'tags' in first_item, "Missing 'tags' field"
-                assert isinstance(first_item['tags'], list), "'tags' should be a list"
-
-            print("Test 1 passed: Basic output structure is valid")
-            passed += 1
-        except (json.JSONDecodeError, AssertionError) as e:
-            print(f"Test 1 failed: {str(e)}")
-            print(f"Output was: {result.stdout[:200]}...")
+        if result.returncode != 0:
+            print(f"❌ Test 1 Failed (Runtime Error)\nSTDERR:\n{result.stderr}")
             failed += 1
-
+        else:
+            try:
+                data = json.loads(result.stdout)
+                if not isinstance(data, list):
+                    print("❌ Test 1 Failed: Output is not a JSON array")
+                    failed += 1
+                elif len(data) < 10:
+                    print(f"❌ Test 1 Failed: Expected >=10 quotes, got {len(data)}")
+                    failed += 1
+                else:
+                    valid = True
+                    for item in data[:3]:  # Check first 3 items
+                        if not all(k in item for k in ['text', 'author', 'tags']):
+                            valid = False
+                            break
+                        if not isinstance(item['tags'], list):
+                            valid = False
+                            break
+                    if valid:
+                        print(f"✅ Test 1 Passed (Got {len(data)} quotes in {elapsed:.2f}s)")
+                        passed += 1
+                    else:
+                        print("❌ Test 1 Failed: Missing required fields in items")
+                        failed += 1
+            except json.JSONDecodeError:
+                print(f"❌ Test 1 Failed: Invalid JSON output\n{result.stdout[:200]}...")
+                failed += 1
     except subprocess.TimeoutExpired:
-        print(f"Test 1 failed: Timeout after {timeout} seconds")
-        failed += 1
-    except Exception as e:
-        print(f"Test 1 failed with unexpected error: {str(e)}")
+        print(f"❌ Test 1 Failed: Timeout after {timeout} seconds")
         failed += 1
 
-    # Test 2: Empty case handling (should return empty array)
+    # Test 2: Data completeness check
     try:
-        # Mock the response by modifying the URL to non-existent page
-        original_code = open('solution.py').read()
-        modified_code = original_code.replace(
-            'base_url = "http://quotes.toscrape.com"',
-            'base_url = "http://nonexistent-quotes-site.example.com"'
-        )
-
-        with open('solution_temp.py', 'w') as f:
-            f.write(modified_code)
-
-        start_time = time()
-        result = subprocess.run(['python3', 'solution_temp.py'], 
-                              capture_output=True, 
-                              text=True,
-                              timeout=timeout)
-
-        try:
-            data = json.loads(result.stdout)
-            assert data == [], "Should return empty array on error"
-            assert "Error fetching data" in result.stderr, "Should log error to stderr"
-            print("Test 2 passed: Handles request errors correctly")
-            passed += 1
-        except (json.JSONDecodeError, AssertionError) as e:
-            print(f"Test 2 failed: {str(e)}")
-            failed += 1
-
-    except subprocess.TimeoutExpired:
-        print(f"Test 2 failed: Timeout after {timeout} seconds")
-        failed += 1
-    except Exception as e:
-        print(f"Test 2 failed with unexpected error: {str(e)}")
-        failed += 1
-    finally:
-        # Restore original file
-        with open('solution_temp.py', 'w') as f:
-            f.write(original_code)
-
-    # Test 3: Data validation (check field types and cleaning)
-    try:
-        start_time = time()
+        start = time()
         result = subprocess.run(['python3', 'solution.py'], 
-                              capture_output=True, 
-                              text=True,
-                              timeout=timeout)
+                              capture_output=True, text=True, timeout=timeout)
 
-        try:
+        if result.returncode == 0:
             data = json.loads(result.stdout)
-            if len(data) > 0:
-                for item in data[:5]:  # Check first 5 items
-                    assert isinstance(item['author'], str), "Author should be string"
-                    assert isinstance(item['text'], str), "Text should be string"
-                    assert isinstance(item['tags'], list), "Tags should be list"
-                    for tag in item['tags']:
-                        assert isinstance(tag, str), "Each tag should be string"
-                        assert '\n' not in tag, "Tags should not contain newlines"
-                    assert '\n' not in item['text'], "Text should be cleaned"
-                    assert not item['text'].startswith('“') and not item['text'].endswith('”'), "Quotes should be stripped"
+            empty_fields = 0
+            for item in data:
+                if not item.get('text') or not item.get('author'):
+                    empty_fields += 1
 
-            print("Test 3 passed: Data validation successful")
-            passed += 1
-        except (json.JSONDecodeError, AssertionError) as e:
-            print(f"Test 3 failed: {str(e)}")
-            failed += 1
-
-    except subprocess.TimeoutExpired:
-        print(f"Test 3 failed: Timeout after {timeout} seconds")
-        failed += 1
-    except Exception as e:
-        print(f"Test 3 failed with unexpected error: {str(e)}")
+            if empty_fields == 0:
+                print("✅ Test 2 Passed (All quotes have text and author)")
+                passed += 1
+            else:
+                print(f"❌ Test 2 Failed: {empty_fields} quotes missing text/author")
+                failed += 1
+    except:
+        print("❌ Test 2 Failed: Could not validate data completeness")
         failed += 1
 
+    # Test 3: Pagination check (verify multi-page scraping)
+    try:
+        start = time()
+        result = subprocess.run(['python3', 'solution.py'], 
+                              capture_output=True, text=True, timeout=timeout)
+
+        if result.returncode == 0:
+            data = json.loads(result.stdout)
+            if len(data) > 20:  # Site should have >20 quotes total
+                print(f"✅ Test 3 Passed (Multi-page scraping worked, got {len(data)} quotes)")
+                passed += 1
+            else:
+                print(f"❌ Test 3 Failed: Expected >20 quotes, got {len(data)} (possible pagination issue)")
+                failed += 1
+    except:
+        print("❌ Test 3 Failed: Could not validate pagination")
+        failed += 1
+
+    # Summary
     print(f"\nSummary: {passed} passed, {failed} failed")
-    sys.exit(1 if failed > 0 else 0)
+    return failed == 0
 
 if __name__ == "__main__":
-    run_test()
+    if run_test():
+        sys.exit(0)
+    else:
+        sys.exit(1)

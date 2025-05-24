@@ -17,6 +17,7 @@ def ai_printer(msg_type, msg):
     else:
         print(f"{GREEN}{msg}{RESET}", end="", flush=True)
 
+
 def event_callback(event, manager):
     if event == EVENT_CODE.developing_done:
         print(f"{WHITE}===开发者代码==={RESET}", flush=True)
@@ -37,7 +38,6 @@ def event_callback(event, manager):
         print(f"{WHITE}===运行结果==={RESET}", flush=True)
         print(manager.test_res)
         print("开发完成！")
-
             
 
 def main():
@@ -70,14 +70,14 @@ def main():
         base_url="https://api.deepseek.com/",
         api_key=token,
         model=model_developer,
-        extra_params={"temperature": 0.3}
+        extra_params={"temperature": 0.5}
     )
     
     tester = OpenAISession(
         base_url="https://api.deepseek.com/",
         api_key=token,
         model=model_tester,
-        extra_params={"temperature": 0.3}
+        extra_params={"temperature": 0.5}
     )
     
     manager = CodingManager(raw_req, analyst, developer, tester,

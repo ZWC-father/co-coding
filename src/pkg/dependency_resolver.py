@@ -4,106 +4,163 @@ from pathlib import Path
 from typing import List, Set
 
 COMMON_DEP_MAPPING = {
-    # HTTP 客户端
-    "requests": "requests",
-    "urllib3": "urllib3",
-    "certifi": "certifi",
-    "chardet": "chardet",
-    "charset_normalizer": "charset-normalizer",
-
-    # 数据科学 / 科学计算
+    # Web 爬虫 / 解析
+    "bs4": "beautifulsoup4",
+    "lxml": "lxml",
+    "html5lib": "html5lib",
+    "xmltodict": "xmltodict",
+    "markdown": "Markdown",
+    "mistune": "mistune",
+    # 图像处理
+    "cv2": "opencv-python",
+    "PIL": "Pillow",
+    "imageio": "imageio",
+    "skimage": "scikit-image",
+    # 数据科学 与 机器学习
     "numpy": "numpy",
-    "scipy": "scipy",
     "pandas": "pandas",
-    "matplotlib": "matplotlib",
-    "seaborn": "seaborn",
+    "scipy": "scipy",
     "sklearn": "scikit-learn",
     "statsmodels": "statsmodels",
     "sympy": "sympy",
-
-    # 机器学习 / 深度学习
     "tensorflow": "tensorflow",
     "torch": "torch",
-    "torchvision": "torchvision",
     "keras": "keras",
     "xgboost": "xgboost",
     "lightgbm": "lightgbm",
-
-    # Web 框架
-    "flask": "Flask",
-    "django": "Django",
-    "fastapi": "fastapi",
-    "starlette": "starlette",
-    "uvicorn": "uvicorn",
-    "gunicorn": "gunicorn",
-
-    # ORM / 数据库
-    "sqlalchemy": "SQLAlchemy",
-    "alembic": "alembic",
-    "pymysql": "PyMySQL",
-    "psycopg2": "psycopg2-binary",
-    "redis": "redis",
-    "aioredis": "aioredis",
-
-    # 模板 & Web 工具
-    "jinja2": "Jinja2",
-    "itsdangerous": "itsdangerous",
-    "werkzeug": "Werkzeug",
-
-    # 爬虫 / HTML 解析
-    "bs4": "beautifulsoup4",
-    "lxml": "lxml",
-    "scrapy": "Scrapy",
-
-    # 图像处理
-    "PIL": "Pillow",
-
-    # 测试
-    "pytest": "pytest",
-    "unittest": "unittest",       # 标准库，一般无需安装
-    "hypothesis": "hypothesis",
-    "coverage": "coverage",
-
-    # 命令行工具
-    "click": "click",
-    "typer": "typer",
-
-    # 异步
+    "catboost": "catboost",
+    "gensim": "gensim",
+    "nltk": "nltk",
+    "spacy": "spacy",
+    "cvxpy": "cvxpy",
+    # 可视化
+    "matplotlib": "matplotlib",
+    "seaborn": "seaborn",
+    "plotly": "plotly",
+    "bokeh": "bokeh",
+    "altair": "altair",
+    "dash": "dash",
+    # 网络 请求
+    "requests": "requests",
+    "urllib3": "urllib3",
     "aiohttp": "aiohttp",
     "httpx": "httpx",
-    "asyncio": "asyncio",         # 标准库，无需安装
-
-    # 加密
-    "cryptography": "cryptography",
+    "selenium": "selenium",
+    "paramiko": "paramiko",
+    "pycurl": "pycurl",
+    # 安全 / 加密
     "Crypto": "pycryptodome",
-    "jwt": "PyJWT",
-
-    # 文件 & 数据格式
-    "yaml": "PyYAML",
-    "jsonschema": "jsonschema",
-    "toml": "toml",
-    "xmltodict": "xmltodict",
-
-    # 工具库
+    "cryptography": "cryptography",
+    "pyOpenSSL": "pyOpenSSL",
+    "hashlib": "hashlib",  # stdlib
+    # 数据库 连接
+    "sqlalchemy": "SQLAlchemy",
+    "psycopg2": "psycopg2-binary",
+    "pymysql": "PyMySQL",
+    "mysql.connector": "mysql-connector-python",
+    "pymongo": "pymongo",
+    "redis": "redis",
+    "elasticsearch": "elasticsearch",
+    # 异步 框架
+    "django": "Django",
+    "flask": "Flask",
+    "fastapi": "fastapi",
+    "tornado": "tornado",
+    "starlette": "starlette",
+    "quart": "quart",
+    "uvicorn": "uvicorn",
+    # 缓存、消息队列
+    "kombu": "kombu",
+    "celery": "celery",
+    "rabbitpy": "rabbitpy",
+    "kafka": "kafka-python",
+    "pika": "pika",
+    # 云服务 SDK
+    "boto3": "boto3",
+    "botocore": "botocore",
+    "googleapiclient": "google-api-python-client",
+    "azure.storage.blob": "azure-storage-blob",
+    "azure.identity": "azure-identity",
+    # 测试 相关
+    "pytest": "pytest",
+    "unittest": "unittest",  # stdlib
+    "nose": "nose",
+    "coverage": "coverage",
+    "mock": "mock",
+    "tox": "tox",
+    # 文档 与 构建
+    "sphinx": "Sphinx",
+    "mkdocs": "mkdocs",
+    "docutils": "docutils",
+    "twine": "twine",
+    "wheel": "wheel",
+    "setuptools": "setuptools",
+    # 开发 工具
+    "flake8": "flake8",
+    "pylint": "pylint",
+    "black": "black",
+    "isort": "isort",
+    "mypy": "mypy",
+    "pre-commit": "pre-commit",
+    # 便利 工具
     "tqdm": "tqdm",
-    "python_dotenv": "python-dotenv",
-    "lockfile": "lockfile",
-    "psutil": "psutil",
-    "watchdog": "watchdog",
-
-    # 网络 & WebSocket
-    "websocket": "websocket-client",
-    "websockets": "websockets",
-
-    # 图论
+    "click": "click",
+    "rich": "rich",
+    "colorama": "colorama",
+    "tabulate": "tabulate",
+    "python-dotenv": "python-dotenv",
+    "schedule": "schedule",
+    "retrying": "retrying",
+    "filelock": "filelock",
+    # 可视化图/图论
     "networkx": "networkx",
-
-    # 其他常见
+    "graphviz": "graphviz",
+    "pydot": "pydot",
+    "pygraphviz": "pygraphviz",
+    # 并发 与 事件驱动
+    "gevent": "gevent",
+    "eventlet": "eventlet",
+    "twisted": "Twisted",
+    # 科学 与 大数据
+    "pyarrow": "pyarrow",
+    "fastparquet": "fastparquet",
+    "pyspark": "pyspark",
+    # Azure / AWS / GCP 客户端也可类推
+    # 其他 常见库
+    "ruamel.yaml": "ruamel.yaml",
+    "yaml": "PyYAML",
+    "arrow": "arrow",
     "dateutil": "python-dateutil",
     "pytz": "pytz",
-    "tzlocal": "tzlocal",
-    "pathlib": "pathlib",          # 标准库 (3.4+)
-    "typing_extensions": "typing-extensions",
+    "python-dateutil": "python-dateutil",
+    "six": "six",
+    "pathlib": "pathlib",  # stdlib backport for Py2
+    "dataclasses": "dataclasses",
+    "structlog": "structlog",
+    "loguru": "loguru",
+    # 第三方 UI / GUI
+    "PyQt5": "PyQt5",
+    "wx": "wxPython",
+    "kivy": "kivy",
+    "pygame": "pygame",
+    # 专用 数据格式
+    "simplejson": "simplejson",
+    "ujson": "ujson",
+    "python-rapidjson": "python-rapidjson",
+    "chardet": "chardet",
+    "charset_normalizer": "charset-normalizer",
+    "pycparser": "pycparser",
+    "cffi": "cffi",
+    # 实用 工具
+    "SQLAlchemy-Utils": "SQLAlchemy-Utils",
+    "alembic": "alembic",
+    "prometheus_client": "prometheus-client",
+    "paho.mqtt.client": "paho-mqtt",
+    "wmi": "wmi",
+    "notebook": "notebook",
+    "jupyter": "jupyter",
+    "jupyterlab": "jupyterlab",
+    "ipython": "ipython",
 }
 
 

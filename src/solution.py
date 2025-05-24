@@ -11,37 +11,53 @@ def scrape_quotes():
         page = 1
         while True:
             url = f"{base_url}/page/{page}/"
-            response = requests.get(url)
-            response.raise_for_status()
+            try:
+                response = requests.get(url)
+                response.raise_for_status()
+            except requests.exceptions.RequestException as e:
+                print(f"Error fetching page {page}: {str(e)}", file=sys.stderr)
+                sys.exit(1)
 
             soup = BeautifulSoup(response.text, 'html.parser')
-            quote_elements = soup.select('.quote')
+            quote_containers = soup.find_all('div', class_='quote')
 
-            if not quote_elements:
+            if not quote_containers:
                 break
 
-            for quote in quote_elements:
-                text = quote.select_one('.text').get_text(strip=True).strip('“”')
-                author = quote.select_one('.author').get_text(strip=True)
-                tags = [tag.get_text(strip=True) for tag in quote.select('.tag')]
+            for container in quote_containers:
+                quote_data = {}
 
-                quotes.append({
-                    'author': author,
-                    'text': text,
-                    'tags': tags
-                })
+                text = container.find('span', class_='text')
+                if text:
+                    quote_data['text'] = text.get_text(strip=True).strip('"')
+
+                author = container.find('small', class_='author')
+                if author:
+                    quote_data['author'] = author.get_text(strip=True)
+
+                tags = container.find('div', class_='tags')
+                tag_list = []
+                if tags:
+                    for tag in tags.find_all('a', class_='tag'):
+                        tag_text = tag.get_text(strip=True)
+                        if tag_text:
+                            tag_list.append(tag_text)
+                quote_data['tags'] = tag_list
+
+                if 'text' in quote_data or 'author' in quote_data:
+                    quotes.append(quote_data)
+
+            next_button = soup.find('li', class_='next')
+            if not next_button:
+                break
 
             page += 1
 
-    except requests.exceptions.RequestException as e:
-        print(f"Error fetching data: {e}", file=sys.stderr)
-        return []
     except Exception as e:
-        print(f"Error processing data: {e}", file=sys.stderr)
-        return []
+        print(f"Error during scraping: {str(e)}", file=sys.stderr)
+        sys.exit(1)
 
-    return quotes
+    print(json.dumps(quotes, ensure_ascii=False, indent=2))
 
 if __name__ == "__main__":
-    quotes = scrape_quotes()
-    print(json.dumps(quotes, ensure_ascii=False))
+    scrape_quotes()
