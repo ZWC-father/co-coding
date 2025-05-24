@@ -1,8 +1,9 @@
-import os, shutil
+import sys, os, shutil
 from pkg.coding_manager import *
 from pkg.utils import *
 
 GREEN = "\x1b[92m"; YELLOW = "\x1b[93m"; RED = "\x1b[91m"; WHITE = "\x1b[97m"; RESET = "\x1b[0m"
+
 
 def sys_printer(msg_type, msg):
     if msg_type == SYS_OUTPUT_TYPE.debug:
@@ -37,7 +38,7 @@ def event_callback(event, manager):
     elif event == EVENT_CODE.done:
         print(f"{WHITE}===运行结果==={RESET}", flush=True)
         print(manager.test_res)
-        print("开发完成！")
+        print("===开发完成===")
             
 
 def main():
@@ -56,9 +57,8 @@ def main():
     shutil.rmtree(del_path, ignore_errors=True)
 
     model_analyst = "deepseek-chat"
-    model_developer = "deepseek-chat"
-    model_tester = "deepseek-chat"
-
+    model_developer = "deepseek-reasoner"
+    model_tester = "deepseek-reasoner"
     
     analyst = OpenAISession(
         base_url="https://api.deepseek.com/",
@@ -70,14 +70,14 @@ def main():
         base_url="https://api.deepseek.com/",
         api_key=token,
         model=model_developer,
-        extra_params={"temperature": 0.5}
+        extra_params={"temperature": 0.6}
     )
     
     tester = OpenAISession(
         base_url="https://api.deepseek.com/",
         api_key=token,
         model=model_tester,
-        extra_params={"temperature": 0.5}
+        extra_params={"temperature": 0.6}
     )
     
     manager = CodingManager(raw_req, analyst, developer, tester,

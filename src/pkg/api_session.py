@@ -61,7 +61,9 @@ class OpenAISession:
     ) -> Dict[str, int]:
         """流式模式：回答→on_resp，思考链→on_think；两者均推给 on_chunk"""
         # 重置中断标志
-        self._stop = False
+        if self._stop:
+            self._self_destruct()
+            raise GenerationInterrupted("已手动终止生成")
 
         # 累积上下文
         self.history.append({"role": "user", "content": user_input})
@@ -96,6 +98,7 @@ class OpenAISession:
             for chunk in stream_iter:
                 # 检查中断
                 if self._stop:
+                    self._self_destruct()
                     raise GenerationInterrupted("已手动中断生成")
 
                 if not chunk.choices:
@@ -128,10 +131,6 @@ class OpenAISession:
                         "total_tokens": chunk.usage.total_tokens,
                     }
 
-        except GenerationInterrupted:
-            # 中断不自毁，但清空标志，历史保留中断前状态
-            self._stop = False
-            raise
         except OpenAIError as e:
             self._self_destruct()
             raise RuntimeError(f"OpenAI API 错误: {e}") from e

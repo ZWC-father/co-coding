@@ -1,4 +1,4 @@
-import re, textwrap, pathlib
+import re, ast, textwrap, pathlib
 from typing import List
 
 FENCE_RE = re.compile(r"```(?:python)?\n([\s\S]+?)\n```", re.IGNORECASE)
@@ -23,3 +23,7 @@ def extract_code(text: str) -> str:
 def save(path: str, content: str):
     pathlib.Path(path).write_text(content, encoding="utf-8")
 
+def check_syntax(path: str):
+    with open(path, encoding='utf-8') as f:
+        source = f.read()
+        ast.parse(source, filename=path)

@@ -1,168 +1,19 @@
-import sys, subprocess, ast
-import importlib.util
+import re, subprocess
 from pathlib import Path
-from typing import List, Set
+from typing import List
 
-COMMON_DEP_MAPPING = {
-    # Web 爬虫 / 解析
-    "bs4": "beautifulsoup4",
-    "lxml": "lxml",
-    "html5lib": "html5lib",
-    "xmltodict": "xmltodict",
-    "markdown": "Markdown",
-    "mistune": "mistune",
-    # 图像处理
-    "cv2": "opencv-python",
-    "PIL": "Pillow",
-    "imageio": "imageio",
-    "skimage": "scikit-image",
-    # 数据科学 与 机器学习
-    "numpy": "numpy",
-    "pandas": "pandas",
-    "scipy": "scipy",
-    "sklearn": "scikit-learn",
-    "statsmodels": "statsmodels",
-    "sympy": "sympy",
-    "tensorflow": "tensorflow",
-    "torch": "torch",
-    "keras": "keras",
-    "xgboost": "xgboost",
-    "lightgbm": "lightgbm",
-    "catboost": "catboost",
-    "gensim": "gensim",
-    "nltk": "nltk",
-    "spacy": "spacy",
-    "cvxpy": "cvxpy",
-    # 可视化
-    "matplotlib": "matplotlib",
-    "seaborn": "seaborn",
-    "plotly": "plotly",
-    "bokeh": "bokeh",
-    "altair": "altair",
-    "dash": "dash",
-    # 网络 请求
-    "requests": "requests",
-    "urllib3": "urllib3",
-    "aiohttp": "aiohttp",
-    "httpx": "httpx",
-    "selenium": "selenium",
-    "paramiko": "paramiko",
-    "pycurl": "pycurl",
-    # 安全 / 加密
-    "Crypto": "pycryptodome",
-    "cryptography": "cryptography",
-    "pyOpenSSL": "pyOpenSSL",
-    "hashlib": "hashlib",  # stdlib
-    # 数据库 连接
-    "sqlalchemy": "SQLAlchemy",
-    "psycopg2": "psycopg2-binary",
-    "pymysql": "PyMySQL",
-    "mysql.connector": "mysql-connector-python",
-    "pymongo": "pymongo",
-    "redis": "redis",
-    "elasticsearch": "elasticsearch",
-    # 异步 框架
-    "django": "Django",
-    "flask": "Flask",
-    "fastapi": "fastapi",
-    "tornado": "tornado",
-    "starlette": "starlette",
-    "quart": "quart",
-    "uvicorn": "uvicorn",
-    # 缓存、消息队列
-    "kombu": "kombu",
-    "celery": "celery",
-    "rabbitpy": "rabbitpy",
-    "kafka": "kafka-python",
-    "pika": "pika",
-    # 云服务 SDK
-    "boto3": "boto3",
-    "botocore": "botocore",
-    "googleapiclient": "google-api-python-client",
-    "azure.storage.blob": "azure-storage-blob",
-    "azure.identity": "azure-identity",
-    # 测试 相关
-    "pytest": "pytest",
-    "unittest": "unittest",  # stdlib
-    "nose": "nose",
-    "coverage": "coverage",
-    "mock": "mock",
-    "tox": "tox",
-    # 文档 与 构建
-    "sphinx": "Sphinx",
-    "mkdocs": "mkdocs",
-    "docutils": "docutils",
-    "twine": "twine",
-    "wheel": "wheel",
-    "setuptools": "setuptools",
-    # 开发 工具
-    "flake8": "flake8",
-    "pylint": "pylint",
-    "black": "black",
-    "isort": "isort",
-    "mypy": "mypy",
-    "pre-commit": "pre-commit",
-    # 便利 工具
-    "tqdm": "tqdm",
-    "click": "click",
-    "rich": "rich",
-    "colorama": "colorama",
-    "tabulate": "tabulate",
-    "python-dotenv": "python-dotenv",
-    "schedule": "schedule",
-    "retrying": "retrying",
-    "filelock": "filelock",
-    # 可视化图/图论
-    "networkx": "networkx",
-    "graphviz": "graphviz",
-    "pydot": "pydot",
-    "pygraphviz": "pygraphviz",
-    # 并发 与 事件驱动
-    "gevent": "gevent",
-    "eventlet": "eventlet",
-    "twisted": "Twisted",
-    # 科学 与 大数据
-    "pyarrow": "pyarrow",
-    "fastparquet": "fastparquet",
-    "pyspark": "pyspark",
-    # Azure / AWS / GCP 客户端也可类推
-    # 其他 常见库
-    "ruamel.yaml": "ruamel.yaml",
-    "yaml": "PyYAML",
-    "arrow": "arrow",
-    "dateutil": "python-dateutil",
-    "pytz": "pytz",
-    "python-dateutil": "python-dateutil",
-    "six": "six",
-    "pathlib": "pathlib",  # stdlib backport for Py2
-    "dataclasses": "dataclasses",
-    "structlog": "structlog",
-    "loguru": "loguru",
-    # 第三方 UI / GUI
-    "PyQt5": "PyQt5",
-    "wx": "wxPython",
-    "kivy": "kivy",
-    "pygame": "pygame",
-    # 专用 数据格式
-    "simplejson": "simplejson",
-    "ujson": "ujson",
-    "python-rapidjson": "python-rapidjson",
-    "chardet": "chardet",
-    "charset_normalizer": "charset-normalizer",
-    "pycparser": "pycparser",
-    "cffi": "cffi",
-    # 实用 工具
-    "SQLAlchemy-Utils": "SQLAlchemy-Utils",
-    "alembic": "alembic",
-    "prometheus_client": "prometheus-client",
-    "paho.mqtt.client": "paho-mqtt",
-    "wmi": "wmi",
-    "notebook": "notebook",
-    "jupyter": "jupyter",
-    "jupyterlab": "jupyterlab",
-    "ipython": "ipython",
-}
-
+def contains_phrase(text: str, phrase: str) -> bool:
+    """
+    在只含 ASCII 的文本中查找含空格的子串。
+    1. 将连续空白折叠成一个空格；
+    2. 两端去空格；
+    3. 直接用 `in` 或简易正则查找。
+    """
+    # 统一空白为单个空格
+    text_norm   = re.sub(r'\s+', ' ', text).strip()
+    phrase_norm = re.sub(r'\s+', ' ', phrase).strip()
+    # 直接包含判断
+    return phrase_norm in text_norm
 
 class DependencyResolver:
     """
@@ -174,71 +25,76 @@ class DependencyResolver:
         resolver.install_from_files(["solution.py", "test_solution.py"])
     """
 
-    # 标准库模块集合（可根据具体 Python 版本调整）
-    _stdlib: Set[str] = set(sys.builtin_module_names)
-
     def __init__(self):
-        """
-        :param extra_mapping: 可选的模块名到 pip 包名映射，
-                              例如 {"yaml": "pyyaml"}。
-        """
-        self.mapping = COMMON_DEP_MAPPING
+        # 保留属性以兼容旧接口
+        self.mapping = {}
 
-    def _parse_imports(self, filepath: Path) -> Set[str]:
+    def _generate_requirements(self, project_path: str) -> List[str]:
         """
-        从单个文件中解析 import 语句，返回模块名集合。
+        调用 pipreqs 生成依赖列表；使用 --print 参数确保无交互。
         """
-        tree = ast.parse(filepath.read_text(encoding="utf-8"), filename=str(filepath))
-        mods: Set[str] = set()
-        for node in ast.walk(tree):
-            if isinstance(node, ast.Import):
-                for alias in node.names:
-                    mods.add(alias.name.split(".")[0])
-            elif isinstance(node, ast.ImportFrom):
-                if node.module:
-                    mods.add(node.module.split(".")[0])
-        return mods
+        try:
+            result = subprocess.run(
+                ["pipreqs", project_path, "--print"],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+                check=True
+            )
+            if contains_phrase(result.stderr, "does not exist"):
+                raise RuntimeError(f"依赖生成失败（pipreqs）：\n{result.stderr.strip()}")
+ 
+            # 每行即一个包名
+            return [line.strip() for line in result.stdout.splitlines() if line.strip()]
+        except subprocess.CalledProcessError as e:
+            raise RuntimeError(
+                f"依赖生成失败（pipreqs）：\n{e.stderr.strip()}"
+            ) from e
+        except FileNotFoundError:
+            raise RuntimeError(
+                "pipreqs 未安装或不可执行，请先运行 pip install pipreqs"
+            )
 
     def _is_installed(self, module: str) -> bool:
         """
-        判断模块是否已安装。
+        判断包是否已安装。仅检查模块名对应的分发包是否可 import。
         """
+        import importlib.util
         return importlib.util.find_spec(module) is not None
 
     def _install_package(self, package: str) -> None:
         """
         使用 pip 安装单个包；失败则抛出 RuntimeError。
         """
-        cmd = [sys.executable, "-m", "pip", "install", package]
+        cmd = ["pip", "install", package]
         try:
             subprocess.check_call(cmd)
         except subprocess.CalledProcessError as e:
             raise RuntimeError(f"依赖安装失败：{package} (exit {e.returncode})") from e
 
-    def install_from_files(self, filepaths: List[str]) -> None:
+    def install_from_files(self) -> None:
         """
-        扫描多个文件所需依赖并安装。
+        扫描文件并使用 pipreqs 自动生成、安装缺失依赖（接口保持不变）。
         """
-        # 收集所有 imports
-        required: Set[str] = set()
-        for fp in filepaths:
-            mods = self._parse_imports(Path(fp))
-            required.update(mods)
+        # 假设脚本在项目根目录下执行；也可根据 filepaths 动态计算根目录
+        project_root = str(Path.cwd())
 
-        # 过滤掉标准库和已安装模块
-        to_install: List[str] = []
-        for mod in sorted(required):
-            if mod in self._stdlib or self._is_installed(mod):
-                continue
-            pkg = self.mapping.get(mod, mod)
-            to_install.append(pkg)
+        # 生成依赖列表
+        to_install = self._generate_requirements(project_root)
 
-        if not to_install:
-            #print("🎉 未发现需要安装的新依赖。")
+        # 过滤已安装包
+        filtered = []
+        for pkg in to_install:
+            # 对于像 "requests==2.28.1" 带版本的需求，仅取包名部分进行检测
+            name = pkg.split("==", 1)[0]
+            if not self._is_installed(name):
+                filtered.append(pkg)
+
+        # 若无新依赖，提前返回
+        if not filtered:
             return
 
-        #print("🔍 发现新依赖，开始安装：", to_install)
-        for pkg in to_install:
+        # 安装所有缺失依赖
+        for pkg in filtered:
             self._install_package(pkg)
-        #print("✅ 依赖安装完成！")
 

@@ -1,4 +1,22 @@
-帮我写脚本爬取这个网址的名言： http://quotes.toscrape.com/
-目标字段：作者、名言文本、标签。
-技术点：requests 获取 HTML，BeautifulSoup 定位 .quote 容器，提取 .text、.author、.tags 列表。
-注意输出格式为json，只能用requests和beautifulsoup4这两个第三方库。
+题目：FastAPI + HTTP Basic Auth 简易 API 服务器
+功能描述:
+用户注册
+接口：POST /register
+请求参数：username、password（明文）
+实现要求：将用户名与 bcrypt 哈希后的密码存入内存字典（或 SQLite），拒绝重复注册 
+
+受保护资源:
+接口：GET /items/ 和 POST /items/
+认证方式：使用 FastAPI 内置的 HTTPBasic 方案，从请求头中解析 Authorization: Basic ... 并校验用户名/密码 
+
+功能：
+GET /items/：返回当前用户的所有“待办事项”列表（内存存储）。
+POST /items/：接收 JSON { "item": "..." }，将其追加到当前用户的待办列表中，并返回最新列表 
+
+密码校验:
+使用 passlib.hash.bcrypt 对注册密码进行哈希，并在每次认证时使用 bcrypt.verify 校验
+
+错误处理:
+认证失败或未提供 Basic 认证头时，返回 HTTP 401 并包含 WWW-Authenticate: Basic，提示客户端使用 Basic Auth 
+
+重复注册返回 HTTP 400；访问不存在的资源返回 HTTP 404。
