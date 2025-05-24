@@ -1,0 +1,19 @@
+{
+  "model": "deepseek-reasoner",
+  "messages": [
+    {
+      "role": "system",
+      "content": "你是资深 Python 开发者。\n根据需求分析师提供的需求，要编写一个单文件Python脚本（我会帮你保存为solution.py）：\n1. 仅输出代码，不要有任何额外解释或注释之外的文字；\n2. 输入从stdin读取，输出写到stdout（输入可选，输出必须），也可以根据需求进行文件操作（仅限工作目录）；\n3. 如果需求有危险系统调用（修改系统配置，获得管理员权限，修改其他目录、文件等），务必输出\"<REFUSED>\"标志拒绝开发；\n4. 必要时可添加调试打印（stdout 或 stderr），由于测试工程师会进行黑盒测试，输出格式务必规范化；\n5. 要处理常见错误（空输入、格式错误、边界值）。\n如果测试工程师（也是AI）反馈错误，你将收到错误报告，需修复并重新输出完整代码。\n如果你认为测试工程师的测试不合理，输出\"<TEST_ERROR>\"标志告诉我。\n注意你生成的代码里不要包含这些标志，防止我误解你。"
+    },
+    {
+      "role": "user",
+      "content": "需求描述：\n### 需求分析要点\n\n#### 1. 功能描述\n- **用户注册功能**\n  - 提供 `POST /register` 接口\n  - 接收参数：`username`（字符串）、`password`（明文字符串）\n  - 存储方式：用户名与 `bcrypt` 哈希后的密码存入内存字典或 SQLite 数据库\n  - 约束：拒绝重复用户名注册\n\n- **受保护资源**\n  - **GET /items/**\n    - 返回当前用户的所有待办事项列表（内存存储）\n    - 需要 HTTP Basic 认证\n  - **POST /items/**\n    - 接收 JSON 格式数据：`{ \"item\": \"...\" }`\n    - 将数据追加到当前用户的待办列表中\n    - 返回更新后的待办列表\n    - 需要 HTTP Basic 认证\n\n#### 2. 输入与输出\n- **输入**\n  - **用户注册（POST /register）**\n    - 请求体：`{\"username\": \"string\", \"password\": \"string\"}`\n    - 约束：`username` 和 `password` 不能为空\n  - **获取待办事项（GET /items/）**\n    - 请求头：`Authorization: Basic <base64(username:password)>`\n  - **添加待办事项（POST /items/）**\n    - 请求头：`Authorization: Basic <base64(username:password)>`\n    - 请求体：`{\"item\": \"string\"}`\n\n- **输出**\n  - **用户注册成功**\n    - 返回 HTTP 200 或 201\n    - 响应体：`{\"message\": \"User registered successfully\"}`\n  - **用户注册失败（重复用户名）**\n    - 返回 HTTP 400\n    - 响应体：`{\"detail\": \"Username already registered\"}`\n  - **获取待办事项成功**\n    - 返回 HTTP 200\n    - 响应体：`{\"items\": [\"item1\", \"item2\", ...]}`\n  - **添加待办事项成功**\n    - 返回 HTTP 200\n    - 响应体：`{\"items\": [\"item1\", \"item2\", ...]}`\n  - **认证失败**\n    - 返回 HTTP 401\n    - 响应头：`WWW-Authenticate: Basic`\n    - 响应体：`{\"detail\": \"Not authenticated\"}`\n\n#### 3. 异常情况及处理建议\n- **重复注册**\n  - 检测用户名是否已存在，若存在则返回 HTTP 400\n- **认证失败**\n  - 未提供 `Authorization` 头或认证信息无效时返回 HTTP 401\n  - 包含 `WWW-Authenticate: Basic` 头提示客户端\n- **无效请求数据**\n  - 若请求体不符合要求（如缺少字段或字段类型错误），返回 HTTP 422\n- **资源不存在**\n  - 访问未注册用户的待办事项时返回 HTTP 404\n\n#### 4. 技术约束\n- 使用 `FastAPI` 框架实现\n- 使用 `passlib.hash.bcrypt` 进行密码哈希和验证\n- 认证方式：HTTP Basic Auth（FastAPI 内置支持）\n- 数据存储：内存字典或 SQLite 数据库（单文件实现）\n- 错误处理需符合 HTTP 标准状态码\n\n#### 5. 其他说明\n- 密码存储必须使用 `bcrypt` 哈希\n- 认证时需验证 `bcrypt` 哈希密码\n- 待办事项按用户隔离存储\n- 无需持久化存储（重启后数据可丢失）"
+    }
+  ],
+  "stream": true,
+  "max_tokens": 4096,
+  "stream_options": {
+    "include_usage": true
+  },
+  "temperature": 0.6
+}

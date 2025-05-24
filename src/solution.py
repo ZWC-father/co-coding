@@ -1,42 +1,57 @@
-import sys
-import json
-import requests
-from bs4 import BeautifulSoup
-from urllib.parse import urljoin
+from fastapi import FastAPI, Depends, HTTPException, status, Security
+from fastapi.security import HTTPBasic, HTTPBasicCredentials
+from pydantic import BaseModel, Field
+from passlib.context import CryptContext
 
-def fetch_quotes():
-    url = "http://quotes.toscrape.com/"
-    try:
-        response = requests.get(url)
-        response.raise_for_status()
-    except requests.exceptions.RequestException as e:
-        print(f"Error fetching data: {str(e)}", file=sys.stderr)
-        sys.exit(1)
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
-    soup = BeautifulSoup(response.text, 'html.parser')
-    quotes = soup.find_all('div', class_='quote')
+app = FastAPI()
 
-    result = []
-    for quote in quotes:
-        try:
-            text = quote.find('span', class_='text').get_text(strip=True)
-            author = quote.find('small', class_='author').get_text(strip=True)
-            tags = [tag.get_text(strip=True) for tag in quote.find_all('a', class_='tag')]
+users = {}
+todos = {}
 
-            result.append({
-                "author": author,
-                "text": text,
-                "tags": tags
-            })
-        except AttributeError as e:
-            print(f"Warning: Failed to parse a quote - {str(e)}", file=sys.stderr)
-            continue
+security = HTTPBasic()
 
-    return sorted(result, key=lambda x: x['author'])
+class RegisterRequest(BaseModel):
+    username: str = Field(..., min_length=1)
+    password: str = Field(..., min_length=1)
 
-def main():
-    quotes = fetch_quotes()
-    print(json.dumps(quotes, indent=2, ensure_ascii=False))
+class ItemRequest(BaseModel):
+    item: str = Field(..., min_length=1)
 
-if __name__ == "__main__":
-    main()
+def get_current_username(credentials: HTTPBasicCredentials = Depends(security)):
+    username = credentials.username
+    if username not in users:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Not authenticated",
+            headers={"WWW-Authenticate": "Basic"}
+        )
+    if not pwd_context.verify(credentials.password, users[username]):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Not authenticated",
+            headers={"WWW-Authenticate": "Basic"}
+        )
+    return username
+
+@app.post("/register")
+async def register(request: RegisterRequest):
+    if request.username in users:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Username already registered"
+        )
+    hashed_password = pwd_context.hash(request.password)
+    users[request.username] = hashed_password
+    todos[request.username] = []
+    return {"message": "User registered successfully"}
+
+@app.get("/items/")
+async def get_items(username: str = Depends(get_current_username)):
+    return {"items": todos[username]}
+
+@app.post("/items/")
+async def add_item(item: ItemRequest, username: str = Depends(get_current_username)):
+    todos[username].append(item.item)
+    return {"items": todos[username]}
