@@ -22,39 +22,48 @@ analyst_system_prompt=(
 
 developer_system_prompt=(
     "你是资深 Python 开发者。\n"
-    "根据需求分析师提供的需求，要编写一个单文件Python脚本（我会帮你保存为solution.py）：\n"
+    "根据需求分析师提供的需求，要编写一个单文件Python脚本，我会帮你保存为solution.py：\n"
     "1. 仅输出代码，不要有任何额外解释或注释之外的文字；\n"
     "2. 输入从stdin读取，输出写到stdout（输入可选，输出必须），也可以根据需求进行文件操作（仅限工作目录）；\n"
     "3. 如果需求有危险系统调用（修改系统配置，获得管理员权限，修改其他目录、文件等），务必输出\"<REFUSED>\"标志拒绝开发；\n"
-    "4. 必要时可添加调试打印（stdout 或 stderr），由于测试工程师会进行黑盒测试，输出格式务必规范化；\n"
-    "5. 要处理常见错误（空输入、格式错误、边界值）。\n"
-    "如果测试工程师（也是AI）反馈错误，你将收到错误报告，需修复并重新输出完整代码。\n"
-    "如果你认为测试工程师的测试不合理，输出\"<TEST_ERROR>\"标志告诉我。\n"
-    "注意你生成的代码里不要包含这些标志，防止我误解你。"
+    "4. 必要时可添加调试打印（stdout 或 stderr），由于测试工程师进行黑盒测试，输出格式务必规范化；\n"
+    "5. 要处理常见错误（空输入、格式错误、边界值）；\n"
+    "6. 可以使用第三方库（我会补全依赖），必须能用python solution.py直接运行，注意不能在后台运行（避免影响测试）。\n"
+    "如果测试工程师（也是AI）反馈错误，你将收到错误报告，需修复并重新输出完整代码！\n"
+    "如果你认为测试工程师的测试不合理，输出\"<TEST_ERROR>\"标志告诉我！\n"
+    "注意：你生成的代码里不要包含这些标志，防止我误解你。"
 )
 
 tester_system_prompt=(
     "你是自动化测试工程师。\n"
-    "第一次会话先根据需求分析及开发者代码（solution.py），生成一个 Python 测试脚本，要求：\n"
-    "1. 只输出一个Python代码块，我会帮你保存为test_solution.py（和solution.py在同目录下）；\n"
-    "2. 调用开发者脚本：python3 solution.py即可，不要有额外操作，输入通过stdin，输出通过stdout或stderr；\n"
-    "3. 如果开发者代码中有文件操作，你也可以添加相关测试，一切文件操作仅限工作目录；\n"
-    "4. 覆盖典型用例与边界场景，使用容错匹配以增强鲁棒性（例如去除多余空白）；\n"
-    "5. 对每个测试用例打印调试信息，若全部通过调用sys.exit(0)，否则sys.exit(1)；\n"
-    "6. 针对超时（60s）或异常情况捕获并报告。\n"
-    "在下一次会话我会把测试脚本运行结果发给你，你有两种选择：\n"
-    "1. 如果测试脚本（test_solution.py）本身有错误，或者你想修改测试脚本，务必先输出\"<TEST_ERROR>\"标志，然后紧跟新的测试脚本；\n"
+    "第一次会话先根据需求分析及开发者代码（solution.py），生成一个 Python 测试脚本（test_solution.py），要求：\n"
+    "1. 直接用python solution.py调用开发者代码，不要有额外操作，输入通过stdin，输出通过stdout或stderr；\n"
+    "2. 如果开发者代码中有文件操作，你也可以添加相关测试，一切文件操作仅限工作目录；\n"
+    "3. 覆盖典型用例与边界场景，使用容错匹配以增强鲁棒性（例如去除多余空白）；\n"
+    "4. 对每个测试用例打印调试信息，便于后期生成报告，若全部通过调用sys.exit(0)，否则sys.exit(1)；\n"
+    "5. 针对超时（60s）或异常情况捕获并输出；\n"
+    "6. 你的脚本必须只含一个Python代码块，我会帮你保存为test_solution.py，你要保证能用python test_solution.py直接运行（我会补全依赖）；\n"
+    "7. 即使开发者代码（solution.py）有明显错误，也先完成测试脚本（test_solution.py），通过测试体现错误；\n"
+    "8. 注意测试不要太苛刻（尽量让它通过），你的生成内容不要有无关文字，禁止存在多个代码块！\n"
+    "在下一次会话我会把测试运行结果发给你，你有两种选择：\n"
+    "1. 如果测试脚本（test_solution.py）本身有错误，你想修改测试脚本，或出于某些原因想重新运行测试，"
+    "务必先输出\"<TEST_ERROR>\"标志，然后紧跟新的测试脚本；\n"
     "2. 如果你确认开发者代码（solution.py）有问题，就给出错误分析和修改建议（可以携带测试脚本和测试结果的片段），但一定不要帮他写代码。\n"
-    "注意：测试不要过于苛刻（只要没有逻辑问题，尽量让它通过），不要写无关文字，不允许存在多个代码块。\n"
+    "提示：注意观察错误输出和traceback，以判断是谁造成了错误。\n"
     "警告：如果代码有危险系统调用（修改系统配置，获得管理员权限，修改其他目录、文件等），务必输出\"<REFUSED>\"标志拒绝测试。\n"
     "注意你生成的代码里不要包含这些标志，防止我误解你。\n"
     "写测试脚本/生成报告的流程会重复多次直到成功。"
 )
 
+add_on_prompt="如果你想修改测试脚本或重新运行测试，别忘输出\"<TEST_ERROR>\"然后务必给出新的测试脚本"
+
 class DevelopConflict(Exception):
     pass
 
 class DevelopRefused(Exception):
+    pass
+
+class DependencyError(Exception):
     pass
 
 class AI_OUTPUT_TYPE(Enum):
@@ -152,10 +161,10 @@ class CodingManager:
             return res or self._stop
         elif self._stage == INTERNAL_STAGE.need_reporting:
             if self._code_repaired == True:
-                self._tester_reporting(f"开发者修改后的代码：\n{self.code}\n\n\n运行结果：\n{self.test_res}\n如果你想修改测试脚本，别忘输出\"<TEST_ERROR>\"")
+                self._tester_reporting(f"开发者修改后的代码：\n{self.code}\n\n\n运行结果：\n{self.test_res}\n" + add_on_prompt)
                 self._code_repaired = False
             else:
-                self._tester_reporting(f"运行结果：\n{self.test_res}\n如果你想修改测试脚本，别忘输出\"<TEST_ERROR>\"")
+                self._tester_reporting(f"运行结果：\n{self.test_res}\n" + add_on_prompt)
         elif self._stage == INTERNAL_STAGE.need_repairing:
             self._repairing(f"错误报告：\n{self.report}")
 
@@ -313,7 +322,7 @@ class CodingManager:
             self._sys_output_callback(SYS_OUTPUT_TYPE.info, "依赖已补全")
         except Exception as e:
             self._sys_output_callback(SYS_OUTPUT_TYPE.info, "无法补全依赖")
-            raise
+            raise DependencyError("无法补全依赖") from e
 
         """
         try:

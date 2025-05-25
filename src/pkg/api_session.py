@@ -82,12 +82,14 @@ class OpenAISession:
         # 写调试 payload
         payload_file = f"debug_payloads/payload_{int(time.time()*1000)}.json"
         try:
-            Path(payload_file).write_text(
+            p = Path(payload_file)
+            if not p.parent.exists(): p.parent.mkdir(parents=True)
+            p.write_text(
                 json.dumps(request_kwargs, ensure_ascii=False, indent=2),
                 encoding="utf-8"
             )
         except Exception as e:
-            print(f"[WARN] 无法写调试文件: {e}")
+            print(f"无法写调试文件: {e}")
 
         usage = {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}
         answer_parts: List[str] = []

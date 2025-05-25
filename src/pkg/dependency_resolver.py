@@ -35,7 +35,7 @@ class DependencyResolver:
         """
         try:
             result = subprocess.run(
-                ["pipreqs", project_path, "--print"],
+                    ["pipreqs", project_path, "--print", "--pypi-server", "https://mirrors.sdu.edu.cn/pypi/pypi/"],
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
                 text=True,
