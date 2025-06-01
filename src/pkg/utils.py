@@ -4,6 +4,9 @@ from typing import List
 FENCE_RE = re.compile(r"```(?:python)?\n([\s\S]+?)\n```", re.IGNORECASE)
 
 def extract_code(text: str) -> str:
+    if "```python" not in text.lower():
+        raise RuntimeError("没有可提取的代码")
+    
     # 1. 提取代码块或整段
     m = FENCE_RE.search(text)
     code = m.group(1) if m else text

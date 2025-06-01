@@ -13,11 +13,11 @@ class OpenAISession:
     def __init__(
         self,
         api_key: str,
-        base_url: str = "https://api.siliconflow.cn/v1/",
-        model: str = "gpt-4o-mini",
-        system_prompt: Optional[str] = None,
+        base_url: str = "https://api.openai.com",
+        model: str = "gpt-4o",
         timeout: int = 60,
-        max_tokens: int = 4096,
+        max_tokens: int = 8192,
+        system_as_user: bool = True,
         extra_params: Optional[Dict] = None,
     ):
         # 禁用系统代理
@@ -30,18 +30,20 @@ class OpenAISession:
         )
         self.model = model
         self.max_tokens = max_tokens
+        self.system_as_user = system_as_user
         self.extra = extra_params or {}
         self.history: List[Dict[str, str]] = []
-        if system_prompt:
-            self.history.append({"role": "system", "content": system_prompt})
+        self._stop = False
 
         Path("debug_payloads").mkdir(exist_ok=True)
-        # 中断标志
-        self._stop = False
 
     def set_sys_prompt(self, prompt):
         if not self.history:
-            self.history.append({"role": "system", "content": prompt})
+            if self.system_as_user:
+                self.history.append({"role": "user", "content": prompt})
+            else:
+                self.history.append({"role": "system", "content": prompt})
+
         else:
             raise ValueError("设置系统提示词失败：历史不为空")
     
@@ -100,7 +102,6 @@ class OpenAISession:
             for chunk in stream_iter:
                 # 检查中断
                 if self._stop:
-                    self._self_destruct()
                     raise GenerationInterrupted("已手动中断生成")
 
                 if not chunk.choices:
