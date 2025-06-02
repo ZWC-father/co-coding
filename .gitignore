@@ -1,6 +1,7 @@
 /venv
 api_key
 todo.txt
+debug_payloads
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

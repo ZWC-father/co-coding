@@ -63,8 +63,8 @@ tester_system_prompt=(
     "  - 测试脚本和错误报告正文不要有“<TEST_ERROR>”和“<REFUSED>”及类似字样，这些标志只能出现在开头以避免误解！"
 )
 
-add_on_analyst="（别忘你作为需求分析专家的要求：如果想正式开始分析，先输出“<ANALYSIS>”标志之后再给出分析正文）"
-add_on_tester="（别忘你作为测试工程师的要求：如果想修改测试脚本后重新运行测试，就先输出“<TEST_ERROR>”标志然后务必给出新的测试脚本；如果想让开发者修改代码，就直接生成错误报告和修改建议）"
+add_on_analyst="（别忘你是需求分析专家：如果想正式开始分析，先输出“<ANALYSIS>”标志之后再给出分析正文）"
+add_on_tester="（别忘你是测试工程师：如果想修改测试脚本后重新运行测试，就先输出“<TEST_ERROR>”标志然后务必给出新的测试脚本；如果想让开发者修改代码，就直接生成错误报告和修改建议。注意代码或报告正文不要有那些标志）"
 
 class DevelopConflict(Exception):
     pass
@@ -271,11 +271,11 @@ class CodingManager:
         
         self.code = extract_code(output)
         save("solution.py", self.code)
+        self._code_repaired = True
         
         self._sys_output_callback(SYS_OUTPUT_TYPE.info, "修复完成")
         self._stage = INTERNAL_STAGE.need_testing
         self._event_callback(EVENT_CODE.repairing_done, self)
-        self._code_repaired = True
 
 
     def _developing(self, prompt):
