@@ -3,6 +3,8 @@ from collections import deque
 import tkinter as tk
 import tkinter.font as tkfont
 from tkinter.scrolledtext import ScrolledText
+
+from httpx._transports.base import T
 from pkg.coding_manager import *
 from pkg.utils import *
 

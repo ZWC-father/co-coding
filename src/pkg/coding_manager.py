@@ -155,7 +155,7 @@ class CodingManager:
     
     def stop(self):
         if self._stop: return
-        self._sys_output_callback(SYS_OUTPUT_TYPE.info, "正在终止操作")
+        self._sys_output_callback(SYS_OUTPUT_TYPE.info, "已发送终止信号")
         self._stop = True
         if self._analyst_ref is not None: self._analyst.stop()
         if self._developer_ref is not None: self._developer.stop()

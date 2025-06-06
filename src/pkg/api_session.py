@@ -18,10 +18,11 @@ class OpenAISession:
         timeout: int = 60,
         max_tokens: int = 8192,
         system_as_user: bool = True,
+        trust_env: bool = False,
         extra_params: Optional[Dict] = None,
     ):
         # 禁用系统代理
-        httpx_client = httpx.Client(trust_env=False, timeout=timeout)
+        httpx_client = httpx.Client(trust_env=trust_env, timeout=timeout)
         self.client = openai.OpenAI(
             http_client=httpx_client,
             base_url=base_url,
