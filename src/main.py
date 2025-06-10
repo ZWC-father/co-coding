@@ -191,9 +191,9 @@ def ai_worker():
 
     del_path = Path("debug_payloads")
     shutil.rmtree(del_path, ignore_errors=True)
-    model_analyst = "deepseek-r1-0528"
-    model_developer = "deepseek-r1-0528"
-    model_tester = "deepseek-r1-0528"
+    model_analyst = "deepseek-v3"
+    model_developer = "deepseek-v3"
+    model_tester = "deepseek-v3"
     
     while True:
         global stopped

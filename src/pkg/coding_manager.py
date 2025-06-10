@@ -64,7 +64,7 @@ tester_system_prompt=(
 )
 
 add_on_analyst="（别忘你是需求分析专家：如果想正式开始分析，先输出“<ANALYSIS>”标志之后再给出分析正文）"
-add_on_tester="（别忘你是测试工程师：如果想修改测试脚本后重新运行测试，就先输出“<TEST_ERROR>”标志然后务必给出新的测试脚本；如果想让开发者修改代码，就直接生成错误报告和修改建议。注意代码或报告正文不要有那些标志）"
+add_on_tester="（别忘你是测试工程师：如果想修改测试脚本后重新运行测试，就先输出“<TEST_ERROR>”标志然后务必给出新的测试脚本；如果想让开发者修改代码，就直接生成错误报告和修改建议）"
 
 class DevelopConflict(Exception):
     pass
@@ -222,6 +222,7 @@ class CodingManager:
         
         if "<test_error>" in self.report.lower() or "<testerror>" in self.report.lower():
             self.test_code = extract_code(self.report).replace("<TEST_ERROR>", "", 1).lstrip()
+            self.test_code = self.test_code.replace("</TEST_ERROR>", "", 1)
             save("test_solution.py", self.test_code)
             
             self._sys_output_callback(SYS_OUTPUT_TYPE.info, "测试脚本有错，已修复")
@@ -347,13 +348,15 @@ class CodingManager:
             self._event_callback(EVENT_CODE.testing_done, self)
             return False
         
+        
         resolver = DependencyResolver()
-        try:
-            resolver.install_from_files()
-            self._sys_output_callback(SYS_OUTPUT_TYPE.info, "依赖已补全")
-        except Exception as e:
-            self._sys_output_callback(SYS_OUTPUT_TYPE.info, "无法补全依赖")
-            raise DependencyError("无法补全依赖") from e
+        if not resolver.test_from_file("solution.py") or not resolver.test_from_file("test_solution.py"):
+            try:
+                resolver.install_from_files()
+                self._sys_output_callback(SYS_OUTPUT_TYPE.info, "依赖已补全")
+            except Exception as e:
+                self._sys_output_callback(SYS_OUTPUT_TYPE.info, "无法补全依赖")
+                raise DependencyError("无法补全依赖") from e
 
         """
         try:

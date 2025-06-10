@@ -1,4 +1,4 @@
-import re, subprocess
+import re, subprocess, ast
 from pathlib import Path
 from typing import List
 
@@ -71,6 +71,29 @@ class DependencyResolver:
             subprocess.check_call(cmd)
         except subprocess.CalledProcessError as e:
             raise RuntimeError(f"依赖安装失败：{package} (exit {e.returncode})") from e
+
+    def test_from_file(self, path: str) -> bool:
+        import importlib
+        with open(path, 'r', encoding='utf-8') as f:
+            tree = ast.parse(f.read(), filename=path)
+
+        mods = set()
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Import):
+                for alias in node.names:
+                    mods.add(alias.name)
+            elif isinstance(node, ast.ImportFrom):
+                if node.module:
+                    mods.add(node.module)
+
+        for m in sorted(mods):
+            try:
+                importlib.import_module(m)
+            except ImportError:
+                return False
+
+        return True
+
 
     def install_from_files(self) -> None:
         """
